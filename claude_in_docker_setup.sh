@@ -83,15 +83,23 @@ if [ $IMAGE_EXISTS -ne 0 ]; then
     BUILD_DIR=$(mktemp -d)
     cat << 'EOF' > "$BUILD_DIR/Dockerfile"
 FROM node:22-slim
-RUN apt-get update && apt-get install -y git curl jq && rm -rf /var/lib/apt/lists/*
-RUN npm install -g @anthropic-ai/claude-code
+
+# We keep node and python in case your own projects need them, 
+# but Claude no longer depends on them to install.
+RUN apt-get update && apt-get install -y git curl jq python3 python3-pip python3-venv && rm -rf /var/lib/apt/lists/*
+
+# Run the native installer and move it to a global path
+RUN curl -fsSL https://claude.ai/install.sh | bash && \
+mv /root/.local/bin/claude /usr/local/bin/claude
+
 WORKDIR /workspace
-# Keep the container running in the background
 CMD ["tail", "-f", "/dev/null"]
 EOF
 
-    docker build -t "$IMAGE_NAME" "$BUILD_DIR"
+    # Standard build (network=host is no longer strictly necessary, but safe to keep)
+    docker build --network=host -t "$IMAGE_NAME" "$BUILD_DIR"
     rm -rf "$BUILD_DIR"
+    
     echo "   Image built successfully."
 else
     echo "4. Image '$IMAGE_NAME' already exists. Skipping build."
@@ -100,4 +108,4 @@ fi
 echo "--------------------------------------------------------"
 echo "Setup complete! Your workspace is mapped to: $WORKSPACE_DIR"
 echo "Please run: source ~/.bashrc"
-echo "Then start your environment with: ./start.sh"
+echo "Then start your environment with: ./claude_in_docker_start.sh"
