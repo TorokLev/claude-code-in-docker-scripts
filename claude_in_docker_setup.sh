@@ -82,11 +82,12 @@ if [ $IMAGE_EXISTS -ne 0 ]; then
     
     BUILD_DIR=$(mktemp -d)
     cat << 'EOF' > "$BUILD_DIR/Dockerfile"
-FROM node:22-slim
+FROM python:3.12-slim
 
-# We keep node and python in case your own projects need them, 
-# but Claude no longer depends on them to install.
-RUN apt-get update && apt-get install -y git curl jq python3 python3-pip python3-venv && rm -rf /var/lib/apt/lists/*
+# Install only the essentials for Claude (git, curl) and your workflow
+RUN apt-get update && apt-get install -y --no-install-recommends \
+git curl jq ca-certificates unzip && \
+rm -rf /var/lib/apt/lists/*
 
 # Run the native installer and move it to a global path
 RUN curl -fsSL https://claude.ai/install.sh | bash && \
